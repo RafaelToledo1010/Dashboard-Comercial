@@ -36,11 +36,25 @@ select { padding: 7px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-s
 .chart-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
 .chart-card h3 { font-size: 14px; color: #555; margin-bottom: 16px; font-weight: 600; }
 .chart-wrap { position: relative; height: 280px; }
+.disclaimer { margin-top: 12px; padding: 10px 14px; background: #fff8e1; border-left: 3px solid #ffc53d; border-radius: 4px; font-size: 12px; color: #7a6000; line-height: 1.5; }
+/* Forecast layout */
+.forecast-container { display: flex; gap: 16px; }
+.forecast-chart-wrap { flex: 1; position: relative; height: 280px; }
+.forecast-panel { width: 280px; background: #f9f9f9; border-radius: 8px; border: 1px solid #eee; padding: 14px; display: none; flex-direction: column; gap: 8px; overflow-y: auto; max-height: 280px; }
+.forecast-panel.open { display: flex; }
+.forecast-panel h4 { font-size: 13px; font-weight: 600; color: #333; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 4px; }
+.forecast-panel .fp-close { float: right; cursor: pointer; color: #aaa; font-size: 16px; line-height: 1; }
+.forecast-item { background: white; border-radius: 6px; padding: 8px 10px; border: 1px solid #eee; font-size: 12px; }
+.forecast-item .fi-name { font-weight: 600; color: #333; margin-bottom: 2px; }
+.forecast-item .fi-val { color: #2ea52c; font-weight: 700; }
+.forecast-item .fi-info { color: #888; font-size: 11px; }
+.forecast-sem-prev { font-size: 12px; color: #aaa; text-align: center; padding: 20px 0; }
+/* Tabela */
 .table-section { display: none; margin-top: 8px; }
 .table-toggle { width: 100%; padding: 14px 20px; background: #e8f5e9; border: 1.5px solid #c8e6c9; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; color: #2ea52c; display: flex; justify-content: space-between; align-items: center; }
 .table-toggle:hover { background: #d4edda; }
 .table-collapsible { overflow: hidden; max-height: 0; transition: max-height 0.4s ease; }
-.table-collapsible.open { max-height: 2000px; }
+.table-collapsible.open { max-height: 9999px; }
 .table-inner { background: white; border-radius: 0 0 10px 10px; padding: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
 input[type=text] { width: 100%; padding: 9px 14px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -48,6 +62,10 @@ th { background: #f9f9f9; padding: 10px 12px; text-align: left; font-weight: 600
 td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; }
 tr:nth-child(even) td { background: #fafafa; }
 tr:hover td { background: #f0f7f0; }
+.group-header { cursor: pointer; user-select: none; }
+.group-header td { background: #f0f0f0 !important; font-weight: 700; font-size: 13px; color: #333; padding: 10px 12px; border-top: 2px solid #ddd; }
+.group-header:hover td { background: #e4e4e4 !important; }
+.group-header .gh-icon { float: right; font-size: 12px; color: #888; }
 .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
 .badge-prosp { background: #e8e9eb; color: #555; }
 .badge-neg { background: #ede9fd; color: #5f55ee; }
@@ -55,6 +73,7 @@ tr:hover td { background: #f0f7f0; }
 .badge-perd { background: #fdecea; color: #d33d44; }
 .badge-fech { background: #e6f4ea; color: #008844; }
 #loading { text-align: center; padding: 40px; font-size: 15px; color: #888; }
+#loading-progress { font-size: 12px; color: #aaa; margin-top: 8px; }
 #error { display: none; text-align: center; padding: 40px; color: #d33d44; font-size: 14px; }
 </style>
 </head>
@@ -65,20 +84,20 @@ tr:hover td { background: #f0f7f0; }
 </header>
 <main>
   <div class="cards">
-    <div class="card"><div class="label">Em aberto</div><div class="value" id="c-abertos">—</div></div>
-    <div class="card"><div class="label">Pipeline total</div><div class="value" id="c-pipeline">—</div></div>
-    <div class="card"><div class="label">Fechados no mês</div><div class="value" id="c-fechados">—</div></div>
-    <div class="card"><div class="label">Perdidos no mês</div><div class="value" id="c-perdidos">—</div></div>
+    <div class="card"><div class="label">Em aberto</div><div class="value" id="c-abertos">-</div></div>
+    <div class="card"><div class="label">Pipeline total</div><div class="value" id="c-pipeline">-</div></div>
+    <div class="card"><div class="label">Fechados no mes</div><div class="value" id="c-fechados">-</div></div>
+    <div class="card"><div class="label">Perdidos no mes</div><div class="value" id="c-perdidos">-</div></div>
   </div>
-  <div id="loading">Carregando dados do ClickUp...</div>
+  <div id="loading">Carregando dados do ClickUp...<div id="loading-progress"></div></div>
   <div id="error"></div>
   <div class="filter-bar" id="filter-bar">
     <button class="filter-btn active" onclick="setModo('semana')">Semana</button>
-    <button class="filter-btn" onclick="setModo('mes')">Mês</button>
+    <button class="filter-btn" onclick="setModo('mes')">Mes</button>
     <div id="semana-nav" class="week-nav">
-      <button onclick="navSemana(-1)">‹</button>
+      <button onclick="navSemana(-1)">&#8249;</button>
       <div class="week-days" id="week-days"></div>
-      <button onclick="navSemana(1)">›</button>
+      <button onclick="navSemana(1)">&#8250;</button>
     </div>
     <div id="mes-nav" style="display:none">
       <select id="mes-select" onchange="setMes(this.value)"></select>
@@ -86,65 +105,223 @@ tr:hover td { background: #f0f7f0; }
   </div>
   <div class="charts-section" id="charts-section">
     <div class="charts-grid">
-      <div class="chart-card"><h3>Distribuição por etapa</h3><div class="chart-wrap"><canvas id="chart1"></canvas></div></div>
-      <div class="chart-card"><h3>Fluxo de entrada e saída por etapa</h3><div class="chart-wrap"><canvas id="chart2"></canvas></div></div>
+      <div class="chart-card"><h3>Distribuicao por etapa</h3><div class="chart-wrap"><canvas id="chart1"></canvas></div></div>
+      <div class="chart-card">
+        <h3>Fluxo de entrada e saida por etapa</h3>
+        <div class="chart-wrap"><canvas id="chart2"></canvas></div>
+        <div class="disclaimer"><strong>Aviso:</strong> Este grafico usa a data de ultima atualizacao dos cards como aproximacao de movimentacao entre etapas. O historico real requer plano ClickUp avancado.</div>
+      </div>
       <div class="chart-card"><h3>Idade dos cards por etapa</h3><div class="chart-wrap"><canvas id="chart3"></canvas></div></div>
+      <div class="chart-card">
+        <h3>Forecast de receita — proximas 12 semanas</h3>
+        <div class="forecast-container">
+          <div class="forecast-chart-wrap"><canvas id="chart4"></canvas></div>
+          <div class="forecast-panel" id="forecast-panel">
+            <h4><span id="fp-titulo">Cards</span><span class="fp-close" onclick="fecharForecastPanel()">&#10005;</span></h4>
+            <div id="fp-lista"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="table-section" id="table-section">
     <button class="table-toggle" onclick="toggleTable()">
-      <span id="toggle-label">Todos os negócios (clique para expandir)</span>
-      <span id="toggle-icon">▼</span>
+      <span id="toggle-label">Todos os negocios (clique para expandir)</span>
+      <span id="toggle-icon">&#9660;</span>
     </button>
     <div class="table-collapsible" id="table-collapsible">
       <div class="table-inner">
         <input type="text" id="busca" placeholder="Buscar por qualquer campo..." oninput="filtrarTabela()">
-        <table><thead><tr><th>Cliente</th><th>Consultor</th><th>Serviço</th><th>Valor</th><th>Status</th><th>Estado</th></tr></thead><tbody id="tbody"></tbody></table>
+        <table><thead><tr><th>#</th><th>Cliente</th><th>Consultor</th><th>Servico</th><th>Valor</th><th>Estado</th></tr></thead><tbody id="tbody"></tbody></table>
       </div>
     </div>
   </div>
 </main>
 <script>
 Chart.register(ChartDataLabels);
-const ChartAnnotation = window['chartjs-plugin-annotation'];
-if (ChartAnnotation) Chart.register(ChartAnnotation);
-const API_URL = "https://api.clickup.com/api/v2/list/901321216249/task?include_closed=true&page=0";
-const AUTH = "pk_54928802_IHMAMJXTVMOS74OGBFI5YOMVGWT7JVHL";
-const ETAPAS = ["Prospecção","Em negociação","Projeto","Perdido","Fechado"];
-const CORES = { "Prospecção":"#87909e","Em negociação":"#5f55ee","Projeto":"#ffc53d","Perdido":"#d33d44","Fechado":"#008844" };
-const FAIXAS = ["1-5 dias","6-10 dias","11-15 dias","16-30 dias","+30 dias"];
-let todasTasks=[], instC1=null, instC2=null, instC3=null;
-let modoAtivo="semana", semanaOffset=0, mesSelecionado="";
-document.getElementById("data-hoje").textContent = new Date().toLocaleDateString("pt-BR",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
-function getField(task,name){ return task.custom_fields?.find(f=>f.name===name); }
-function getFieldVal(task,name){ const f=getField(task,name); return f?.value??null; }
-function formatBRL(v){ const n=parseFloat(v); return isNaN(n)?"—":"R$ "+n.toLocaleString("pt-BR",{minimumFractionDigits:2}); }
-function classificarEtapa(s){ if(!s)return"Prospecção"; s=s.toLowerCase(); if(s.includes("prospec"))return"Prospecção"; if(s.includes("negocia"))return"Em negociação"; if(s.includes("projeto"))return"Projeto"; if(s.includes("perdido")||s.includes("perda"))return"Perdido"; if(s.includes("fechado")||s.includes("ganho")||s.includes("closed"))return"Fechado"; return"Prospecção"; }
-function idadeDias(task){ return Math.floor((Date.now()-parseInt(task.date_created))/86400000); }
-function faixaIdx(d){ if(d<=5)return 0; if(d<=10)return 1; if(d<=15)return 2; if(d<=30)return 3; return 4; }
-function badgeClass(etapa){ const m={"Prospecção":"prosp","Em negociação":"neg","Projeto":"proj","Perdido":"perd","Fechado":"fech"}; return"badge badge-"+(m[etapa]||"prosp"); }
-function toggleTable(){ const c=document.getElementById("table-collapsible"); const open=c.classList.toggle("open"); document.getElementById("toggle-label").textContent="Todos os negócios ("+(open?"clique para recolher":"clique para expandir")+")"; document.getElementById("toggle-icon").textContent=open?"▲":"▼"; }
-function filtrarTabela(){ const q=document.getElementById("busca").value.toLowerCase(); document.querySelectorAll("#tbody tr").forEach(tr=>{ tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none"; }); }
-function getSemanaRange(offset){ const hoje=new Date(); const dia=hoje.getDay(); const seg=new Date(hoje); seg.setDate(hoje.getDate()-((dia+6)%7)+offset*7); const dom=new Date(seg); dom.setDate(seg.getDate()+6); return{seg,dom}; }
-function renderSemanaNav(){ const {seg}=getSemanaRange(semanaOffset); const days=["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"]; const container=document.getElementById("week-days"); container.innerHTML=""; const hoje=new Date(); for(let i=0;i<7;i++){ const d=new Date(seg); d.setDate(seg.getDate()+i); const pill=document.createElement("div"); pill.className="day-pill"; if(d.toDateString()===hoje.toDateString())pill.classList.add("today"); if(semanaOffset===0)pill.classList.add("selected"); pill.innerHTML=`<span class="day-name">${days[i]}</span><span class="day-date">${d.getDate().toString().padStart(2,"0")}/${(d.getMonth()+1).toString().padStart(2,"0")}</span>`; pill.onclick=()=>{ semanaOffset=Math.round((d-hoje)/604800000); renderSemanaNav(); renderizarGraficos(todasTasks); }; container.appendChild(pill); } }
-function navSemana(dir){ semanaOffset+=dir; renderSemanaNav(); renderizarGraficos(todasTasks); }
-function setModo(modo){ modoAtivo=modo; document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active")); event.target.classList.add("active"); document.getElementById("semana-nav").style.display=modo==="semana"?"flex":"none"; document.getElementById("mes-nav").style.display=modo==="mes"?"block":"none"; renderizarGraficos(todasTasks); }
-function setMes(v){ mesSelecionado=v; renderizarGraficos(todasTasks); }
-function populaMeses(){ const sel=document.getElementById("mes-select"); const hoje=new Date(); for(let i=0;i<12;i++){ const d=new Date(hoje.getFullYear(),hoje.getMonth()-i,1); const val=`${d.getFullYear()}-${d.getMonth()}`; const label=d.toLocaleDateString("pt-BR",{month:"long",year:"numeric"}); const opt=document.createElement("option"); opt.value=val; opt.textContent=label.charAt(0).toUpperCase()+label.slice(1); sel.appendChild(opt); } mesSelecionado=sel.value; }
-function filtrarPorPeriodo(tasks){ if(modoAtivo==="semana"){ const {seg,dom}=getSemanaRange(semanaOffset); dom.setHours(23,59,59); return tasks.filter(t=>{ const d=new Date(parseInt(t.date_created)); return d>=seg&&d<=dom; }); } else { const [ano,mes]=mesSelecionado.split("-").map(Number); return tasks.filter(t=>{ const d=new Date(parseInt(t.date_created)); return d.getFullYear()===ano&&d.getMonth()===mes; }); } }
-const FLUXO={ semana:{ totais:[10,13,9,5,7], pos:{perm:[6,8,5,2,4],novos:[4,2,0,0,0],deProsp:[0,3,0,1,0],deEmNeg:[0,0,4,2,0],deProjeto:[0,0,0,0,3]}, neg:{paraEmNeg:[3,0,0,0,0],paraProjeto:[0,4,0,0,0],paraPerdido:[1,2,0,0,0],paraFechado:[0,0,3,0,0]} }, mes:{ totais:[32,39,28,20,23], pos:{perm:[18,24,16,8,14],novos:[14,6,0,0,0],deProsp:[0,9,0,5,0],deEmNeg:[0,0,12,7,0],deProjeto:[0,0,0,0,9]}, neg:{paraEmNeg:[9,0,0,0,0],paraProjeto:[0,12,0,0,0],paraPerdido:[5,7,0,0,0],paraFechado:[0,0,9,0,0]} } };
-const topLabelsPlugin={ id:"topLabels", afterDatasetsDraw(chart){ const {ctx,scales,data}=chart; const totais=chart.config.options.plugins.topLabels?.totais; if(!totais)return; ctx.save(); ctx.font="bold 11px 'Segoe UI',Arial,sans-serif"; ctx.fillStyle="#444"; ctx.textAlign="center"; ctx.textBaseline="bottom"; totais.forEach((total,i)=>{ let posSum=0; data.datasets.forEach(ds=>{ if(ds.stack==="pos")posSum+=(ds.data[i]||0); }); const x=scales.x.getPixelForValue(i); const y=scales.y.getPixelForValue(posSum); ctx.fillText(`${total} cards`,x,y-5); }); ctx.restore(); } };
-function renderChart1(tasks){ const cnt={}; ETAPAS.forEach(e=>cnt[e]=0); tasks.forEach(t=>cnt[classificarEtapa(t.status?.status)]++); if(instC1)instC1.destroy(); instC1=new Chart(document.getElementById("chart1"),{ type:"bar", data:{ labels:ETAPAS, datasets:[{ label:"Cards", data:ETAPAS.map(e=>cnt[e]), backgroundColor:ETAPAS.map(e=>CORES[e]), borderRadius:4, borderSkipped:false }] }, options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x} cards`}}, datalabels:{anchor:"center",align:"center",color:"white",font:{weight:500},formatter:v=>v===0?null:v} }, scales:{ x:{beginAtZero:true,ticks:{stepSize:1,precision:0},grid:{color:"#f0f0f0"}}, y:{grid:{display:false}} } } }); }
-function renderChart2(periodo){ const d=FLUXO[periodo]||FLUXO.semana; const datasets=[ {label:"Permaneceram",data:[...d.pos.perm],backgroundColor:"#cccccc",stack:"pos"}, {label:"Novos",data:[...d.pos.novos],backgroundColor:"#4caf50",stack:"pos"}, {label:"De Prospecção",data:[...d.pos.deProsp],backgroundColor:CORES["Prospecção"],stack:"pos"}, {label:"De Em negociação",data:[...d.pos.deEmNeg],backgroundColor:CORES["Em negociação"],stack:"pos"}, {label:"De Projeto",data:[...d.pos.deProjeto],backgroundColor:CORES["Projeto"],stack:"pos"}, {label:"→ Em negociação",data:d.neg.paraEmNeg.map(v=>-v),backgroundColor:CORES["Em negociação"],stack:"neg"}, {label:"→ Projeto",data:d.neg.paraProjeto.map(v=>-v),backgroundColor:CORES["Projeto"],stack:"neg"}, {label:"→ Perdido",data:d.neg.paraPerdido.map(v=>-v),backgroundColor:CORES["Perdido"],stack:"neg"}, {label:"→ Fechado",data:d.neg.paraFechado.map(v=>-v),backgroundColor:CORES["Fechado"],stack:"neg"} ]; if(instC2)instC2.destroy(); instC2=new Chart(document.getElementById("chart2"),{ type:"bar", data:{labels:ETAPAS,datasets}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:"bottom",labels:{boxWidth:12,font:{size:11},padding:10}}, topLabels:{totais:d.totais}, tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${Math.abs(ctx.parsed.y)}`}}, datalabels:{color:"white",font:{size:11,weight:500},formatter:v=>v===0?null:Math.abs(v)}, annotation:{annotations:{zeroLine:{type:"line",scaleID:"y",value:0,borderColor:"#444",borderWidth:2}}} }, scales:{ x:{stacked:true,grid:{display:false}}, y:{stacked:true,ticks:{callback:v=>Math.abs(v)}} } }, plugins:[topLabelsPlugin] }); }
-function renderChart3(tasks){ const mat={}; ETAPAS.forEach(e=>mat[e]=[0,0,0,0,0]); tasks.forEach(t=>{ const e=classificarEtapa(t.status?.status); mat[e][faixaIdx(idadeDias(t))]++; }); const datasets=ETAPAS.map(e=>({ label:e, data:mat[e], backgroundColor:CORES[e], borderRadius:3 })); if(instC3)instC3.destroy(); instC3=new Chart(document.getElementById("chart3"),{ type:"bar", data:{labels:FAIXAS,datasets}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:"bottom",labels:{boxWidth:12,font:{size:11},padding:10}}, datalabels:{anchor:"end",align:"top",font:{size:11},color:ctx=>CORES[ETAPAS[ctx.datasetIndex]],formatter:v=>v===0?null:v} }, scales:{ x:{grid:{display:false}}, y:{beginAtZero:true,ticks:{stepSize:1,precision:0}} } } }); }
-function renderizarGraficos(tasks){ const f=filtrarPorPeriodo(tasks); renderChart1(f); renderChart2(modoAtivo); renderChart3(tasks); }
-function preencherTabela(tasks){ const tbody=document.getElementById("tbody"); tbody.innerHTML=""; tasks.forEach(t=>{ const etapa=classificarEtapa(t.status?.status); const cliente=getFieldVal(t,"N - 1 - Nome do cliente")||t.name||"—"; const consultor=getField(t,"N - 2 - Nome do consultor")?.value?.name||"—"; const servico=getField(t,"S - 1 - serviço prestado")?.value?.name||"—"; const valor=formatBRL(getFieldVal(t,"Z - Valor total")); const estado=getField(t,"N - 4 - Estado")?.value?.name||"—"; const tr=document.createElement("tr"); tr.innerHTML=`<td>${cliente}</td><td>${consultor}</td><td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${servico}</td><td>${valor}</td><td><span class="${badgeClass(etapa)}">${t.status?.status||"—"}</span></td><td>${estado}</td>`; tbody.appendChild(tr); }); }
-populaMeses();
-renderSemanaNav();
-fetch(API_URL,{headers:{Authorization:AUTH}})
-.then(r=>r.json())
-.then(data=>{ todasTasks=data.tasks||[]; document.getElementById("loading").style.display="none"; document.getElementById("filter-bar").style.display="flex"; document.getElementById("charts-section").style.display="block"; document.getElementById("table-section").style.display="block"; let ab=0,pip=0,fech=0,perd=0; todasTasks.forEach(t=>{ const e=classificarEtapa(t.status?.status); const v=parseFloat(getFieldVal(t,"Z - Valor total"))||0; if(e==="Fechado")fech++; else if(e==="Perdido")perd++; else ab++; pip+=v; }); document.getElementById("c-abertos").textContent=ab; document.getElementById("c-pipeline").textContent=formatBRL(pip); document.getElementById("c-fechados").textContent=fech; document.getElementById("c-perdidos").textContent=perd; preencherTabela(todasTasks); renderizarGraficos(todasTasks); })
-.catch(err=>{ document.getElementById("loading").style.display="none"; document.getElementById("error").style.display="block"; document.getElementById("error").textContent="Erro ao carregar dados: "+err.message; });
+var ChartAnnotation=window['chartjs-plugin-annotation'];
+if(ChartAnnotation)Chart.register(ChartAnnotation);
+
+var BASE_URL="https://api.clickup.com/api/v2";
+var LIST_ID="901321216249";
+var AUTH="pk_54928802_IHMAMJXTVMOS74OGBFI5YOMVGWT7JVHL";
+var HEADERS={Authorization:AUTH};
+var ETAPAS=["Prospeccao","Em negociacao","Projeto","Perdido","Fechado"];
+var ETAPAS_ABERTAS=["Prospeccao","Em negociacao","Projeto"];
+var CORES={"Prospeccao":"#87909e","Em negociacao":"#5f55ee","Projeto":"#ffc53d","Perdido":"#d33d44","Fechado":"#008844"};
+var CORES_FAIXA=["#4caf50","#2196f3","#ff9800","#9c27b0","#f44336"];
+var FAIXAS=["1-5 dias","6-10 dias","11-15 dias","16-30 dias","+30 dias"];
+var todasTasks=[],instC1=null,instC2=null,instC3=null,instC4=null;
+var modoAtivo="semana",semanaOffset=0,mesSelecionado="";
+var forecastSemanas=[];
+
+document.getElementById("data-hoje").textContent=new Date().toLocaleDateString("pt-BR",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+
+function getField(task,name){return task.custom_fields&&task.custom_fields.find(function(f){return f.name===name;});}
+function getFieldVal(task,name){var f=getField(task,name);return f&&f.value!=null?f.value:null;}
+function formatBRL(v){var n=parseFloat(v);return isNaN(n)?"R$ 0,00":"R$ "+n.toLocaleString("pt-BR",{minimumFractionDigits:2});}
+function formatBRLNum(v){var n=parseFloat(v);return isNaN(n)?0:n;}
+function formatBRLShort(v){var n=parseFloat(v);if(isNaN(n))return"R$ 0";if(n>=1000000)return"R$ "+(n/1000000).toFixed(1)+"M";if(n>=1000)return"R$ "+(n/1000).toFixed(0)+"k";return"R$ "+n.toFixed(0);}
+function classificarEtapa(s){if(!s)return"Prospeccao";s=s.toLowerCase();if(s.indexOf("prospec")>=0)return"Prospeccao";if(s.indexOf("negocia")>=0)return"Em negociacao";if(s.indexOf("projeto")>=0)return"Projeto";if(s.indexOf("perdido")>=0||s.indexOf("perda")>=0)return"Perdido";if(s.indexOf("fechado")>=0||s.indexOf("ganho")>=0||s.indexOf("closed")>=0)return"Fechado";return"Prospeccao";}
+function idadeDias(task){return Math.floor((Date.now()-parseInt(task.date_created))/86400000);}
+function faixaIdx(d){if(d<=5)return 0;if(d<=10)return 1;if(d<=15)return 2;if(d<=30)return 3;return 4;}
+function badgeClass(etapa){var m={"Prospeccao":"prosp","Em negociacao":"neg","Projeto":"proj","Perdido":"perd","Fechado":"fech"};return"badge badge-"+(m[etapa]||"prosp");}
+function setProgress(msg){document.getElementById("loading-progress").textContent=msg;}
+function inicioSemana(date){var d=new Date(date);var dia=d.getDay();d.setDate(d.getDate()-((dia+6)%7));d.setHours(0,0,0,0);return d;}
+function fimSemana(seg){var d=new Date(seg);d.setDate(d.getDate()+6);d.setHours(23,59,59,999);return d;}
+function labelSemana(seg){var fim=fimSemana(seg);return(seg.getDate().toString().padStart(2,"0")+"/"+(seg.getMonth()+1).toString().padStart(2,"0"))+" - "+(fim.getDate().toString().padStart(2,"0")+"/"+(fim.getMonth()+1).toString().padStart(2,"0"));}
+
+function toggleTable(){var c=document.getElementById("table-collapsible");var open=c.classList.toggle("open");document.getElementById("toggle-label").textContent="Todos os negocios ("+(open?"clique para recolher":"clique para expandir")+")";document.getElementById("toggle-icon").textContent=open?"▲":"▼";}
+function filtrarTabela(){var q=document.getElementById("busca").value.toLowerCase();document.querySelectorAll("#tbody tr").forEach(function(tr){if(tr.classList.contains("group-header")){tr.style.display="";}else{tr.style.display=tr.textContent.toLowerCase().indexOf(q)>=0?"":"none";}});}
+function toggleGrupo(etapa){var rows=document.querySelectorAll('[data-grupo="'+etapa+'"]');var icon=document.getElementById("gh-icon-"+etapa);var hidden=rows[0]&&rows[0].style.display==="none";rows.forEach(function(r){r.style.display=hidden?"":"none";});icon.textContent=hidden?"▼":"▶";}
+function fecharForecastPanel(){document.getElementById("forecast-panel").classList.remove("open");}
+
+function getSemanaRange(offset){var hoje=new Date();var dia=hoje.getDay();var seg=new Date(hoje);seg.setDate(hoje.getDate()-((dia+6)%7)+offset*7);var dom=new Date(seg);dom.setDate(seg.getDate()+6);return{seg:seg,dom:dom};}
+function renderSemanaNav(){var r=getSemanaRange(semanaOffset);var seg=r.seg;var days=["Seg","Ter","Qua","Qui","Sex","Sab","Dom"];var container=document.getElementById("week-days");container.innerHTML="";var hoje=new Date();for(var i=0;i<7;i++){var d=new Date(seg);d.setDate(seg.getDate()+i);var pill=document.createElement("div");pill.className="day-pill";if(d.toDateString()===hoje.toDateString())pill.classList.add("today");if(semanaOffset===0)pill.classList.add("selected");pill.innerHTML='<span class="day-name">'+days[i]+'</span><span class="day-date">'+d.getDate().toString().padStart(2,"0")+"/"+(d.getMonth()+1).toString().padStart(2,"0")+"</span>";(function(dd){pill.onclick=function(){semanaOffset=Math.round((dd-hoje)/604800000);renderSemanaNav();renderizarGraficos(todasTasks);};})(d);container.appendChild(pill);}}
+function navSemana(dir){semanaOffset+=dir;renderSemanaNav();renderizarGraficos(todasTasks);}
+function setModo(modo){modoAtivo=modo;document.querySelectorAll(".filter-btn").forEach(function(b){b.classList.remove("active");});event.target.classList.add("active");document.getElementById("semana-nav").style.display=modo==="semana"?"flex":"none";document.getElementById("mes-nav").style.display=modo==="mes"?"block":"none";renderizarGraficos(todasTasks);}
+function setMes(v){mesSelecionado=v;renderizarGraficos(todasTasks);}
+function populaMeses(){var sel=document.getElementById("mes-select");var hoje=new Date();for(var i=0;i<12;i++){var d=new Date(hoje.getFullYear(),hoje.getMonth()-i,1);var val=d.getFullYear()+"-"+d.getMonth();var label=d.toLocaleDateString("pt-BR",{month:"long",year:"numeric"});var opt=document.createElement("option");opt.value=val;opt.textContent=label.charAt(0).toUpperCase()+label.slice(1);sel.appendChild(opt);}mesSelecionado=sel.value;}
+function getPeriodoRange(){if(modoAtivo==="semana"){var r=getSemanaRange(semanaOffset);var dom=new Date(r.dom);dom.setHours(23,59,59);return{inicio:r.seg,fim:dom};}else{var parts=mesSelecionado.split("-").map(Number);return{inicio:new Date(parts[0],parts[1],1),fim:new Date(parts[0],parts[1]+1,0,23,59,59)};}}
+function filtrarPorPeriodo(tasks){var p=getPeriodoRange();return tasks.filter(function(t){var d=new Date(parseInt(t.date_created));return d>=p.inicio&&d<=p.fim;});}
+function filtrarAtualizadosNoPeriodo(tasks){var p=getPeriodoRange();return tasks.filter(function(t){var d=new Date(parseInt(t.date_updated));return d>=p.inicio&&d<=p.fim;});}
+
+async function fetchTodasTasks(){var todas=[],pagina=0,continua=true;while(continua){setProgress("Buscando negocios - pagina "+(pagina+1)+"...");var r=await fetch(BASE_URL+"/list/"+LIST_ID+"/task?include_closed=true&page="+pagina,{headers:HEADERS});var data=await r.json();var tasks=data.tasks||[];todas=todas.concat(tasks);if(tasks.length<100)continua=false;pagina++;}return todas;}
+
+var topLabelsPlugin={id:"topLabels",afterDatasetsDraw:function(chart){var ctx=chart.ctx;var scales=chart.scales;var data=chart.data;var totais=chart.config.options.plugins.topLabels&&chart.config.options.plugins.topLabels.totais;if(!totais)return;ctx.save();ctx.font="bold 11px 'Segoe UI',Arial,sans-serif";ctx.fillStyle="#444";ctx.textAlign="center";ctx.textBaseline="bottom";totais.forEach(function(total,i){var posSum=0;data.datasets.forEach(function(ds){if(ds.stack==="pos")posSum+=(ds.data[i]||0);});var x=scales.x.getPixelForValue(i);var y=scales.y.getPixelForValue(posSum);ctx.fillText(total+" cards",x,y-5);});ctx.restore();}};
+
+function renderChart1(tasks){var cnt={};ETAPAS.forEach(function(e){cnt[e]=0;});tasks.forEach(function(t){cnt[classificarEtapa(t.status&&t.status.status)]++;});if(instC1)instC1.destroy();instC1=new Chart(document.getElementById("chart1"),{type:"bar",data:{labels:ETAPAS,datasets:[{label:"Cards",data:ETAPAS.map(function(e){return cnt[e];}),backgroundColor:ETAPAS.map(function(e){return CORES[e];}),borderRadius:4,borderSkipped:false}]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return" "+ctx.parsed.x+" cards";}}},datalabels:{anchor:"center",align:"center",color:"white",font:{weight:500},formatter:function(v){return v===0?null:v;}}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,precision:0},grid:{color:"#f0f0f0"}},y:{grid:{display:false}}}}});}
+
+function renderChart2(tasks){var atualizados=filtrarAtualizadosNoPeriodo(tasks);var totais=ETAPAS.map(function(e){var cnt=0;tasks.forEach(function(t){if(classificarEtapa(t.status&&t.status.status)===e)cnt++;});return cnt;});var atualizadosPorEtapa=ETAPAS.map(function(e){var cnt=0;atualizados.forEach(function(t){if(classificarEtapa(t.status&&t.status.status)===e)cnt++;});return cnt;});var permaneceram=ETAPAS.map(function(e,i){return Math.max(0,totais[i]-atualizadosPorEtapa[i]);});var datasets=[{label:"Permaneceram",data:permaneceram,backgroundColor:"#cccccc",stack:"pos"},{label:"Atualizados no periodo",data:atualizadosPorEtapa,backgroundColor:ETAPAS.map(function(e){return CORES[e];}),stack:"pos"}];if(instC2)instC2.destroy();instC2=new Chart(document.getElementById("chart2"),{type:"bar",data:{labels:ETAPAS,datasets:datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{boxWidth:12,font:{size:11},padding:10}},topLabels:{totais:totais},tooltip:{callbacks:{label:function(ctx){return" "+ctx.dataset.label+": "+Math.abs(ctx.parsed.y);}}},datalabels:{color:"white",font:{size:11,weight:500},formatter:function(v){return v===0?null:Math.abs(v);}},annotation:{annotations:{zeroLine:{type:"line",scaleID:"y",value:0,borderColor:"#444",borderWidth:2}}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,beginAtZero:true}}},plugins:[topLabelsPlugin]});}
+
+function renderChart3(tasks){var ETAPAS_MOV=["Prospeccao","Em negociacao","Projeto"];var mat={};ETAPAS_MOV.forEach(function(e){mat[e]=[0,0,0,0,0];});tasks.forEach(function(t){var e=classificarEtapa(t.status&&t.status.status);if(ETAPAS_MOV.indexOf(e)<0)return;mat[e][faixaIdx(idadeDias(t))]++;});var datasets=FAIXAS.map(function(faixa,fi){return{label:faixa,data:ETAPAS_MOV.map(function(e){return mat[e][fi];}),backgroundColor:CORES_FAIXA[fi],borderRadius:3};});if(instC3)instC3.destroy();instC3=new Chart(document.getElementById("chart3"),{type:"bar",data:{labels:ETAPAS_MOV,datasets:datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom",labels:{boxWidth:12,font:{size:11},padding:10}},datalabels:{anchor:"end",align:"top",font:{size:10},color:function(ctx){return CORES_FAIXA[ctx.datasetIndex];},formatter:function(v){return v===0?null:v;}}},scales:{x:{grid:{display:false}},y:{beginAtZero:true,ticks:{stepSize:1,precision:0}}}}});}
+
+function renderChart4(tasks){
+  var hoje=new Date();
+  hoje.setHours(0,0,0,0);
+  var semAtual=inicioSemana(hoje);
+  // Gerar proximas 12 semanas
+  forecastSemanas=[];
+  for(var i=0;i<12;i++){var s=new Date(semAtual);s.setDate(semAtual.getDate()+i*7);forecastSemanas.push(s);}
+  // Cards abertos com due_date
+  var abertos=tasks.filter(function(t){var e=classificarEtapa(t.status&&t.status.status);return ETAPAS_ABERTAS.indexOf(e)>=0;});
+  var semDueDate=[];
+  var porSemana=forecastSemanas.map(function(){return[];});
+  abertos.forEach(function(t){
+    if(!t.due_date){semDueDate.push(t);return;}
+    var due=new Date(parseInt(t.due_date));
+    due.setHours(0,0,0,0);
+    var segDue=inicioSemana(due);
+    var idx=-1;
+    forecastSemanas.forEach(function(s,i){if(s.getTime()===segDue.getTime())idx=i;});
+    if(idx>=0)porSemana[idx].push(t);
+  });
+  var labels=forecastSemanas.map(function(s){return labelSemana(s);});
+  var valores=porSemana.map(function(grupo){var soma=0;grupo.forEach(function(t){soma+=formatBRLNum(getFieldVal(t,"Z - Valor total"));});return soma;});
+  var semPrevLabel="Sem previsao ("+semDueDate.length+")";
+  labels.push(semPrevLabel);
+  valores.push(0);
+  var bgColors=forecastSemanas.map(function(){return"#2ea52c";});
+  bgColors.push("#cccccc");
+  if(instC4)instC4.destroy();
+  instC4=new Chart(document.getElementById("chart4"),{
+    type:"bar",
+    data:{labels:labels,datasets:[{label:"Valor previsto",data:valores,backgroundColor:bgColors,borderRadius:4,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:function(ctx){return" "+formatBRL(ctx.parsed.y);}}},
+        datalabels:{anchor:"end",align:"top",font:{size:10,weight:500},color:"#555",formatter:function(v,ctx){if(ctx.dataIndex===forecastSemanas.length)return semDueDate.length+" cards";return v===0?"Vazio":formatBRLShort(v);}}
+      },
+      scales:{x:{grid:{display:false},ticks:{font:{size:10},maxRotation:45}},y:{beginAtZero:true,ticks:{callback:function(v){return formatBRLShort(v);}}}},
+      onClick:function(evt,elements){
+        if(!elements||elements.length===0)return;
+        var idx=elements[0].index;
+        var panel=document.getElementById("forecast-panel");
+        var lista=document.getElementById("fp-lista");
+        var titulo=document.getElementById("fp-titulo");
+        lista.innerHTML="";
+        if(idx===forecastSemanas.length){
+          titulo.textContent="Sem previsao de fechamento";
+          if(semDueDate.length===0){lista.innerHTML='<div class="forecast-sem-prev">Nenhum card sem previsao</div>';panel.classList.add("open");return;}
+          semDueDate.forEach(function(t){
+            var nome=getFieldVal(t,"N - 1 - Nome do cliente")||t.name||"--";
+            var val=formatBRL(getFieldVal(t,"Z - Valor total"));
+            var etapa=classificarEtapa(t.status&&t.status.status);
+            var div=document.createElement("div");div.className="forecast-item";
+            div.innerHTML='<div class="fi-name">'+nome+'</div><div class="fi-val">'+val+'</div><div class="fi-info"><span class="'+badgeClass(etapa)+'">'+etapa+'</span></div>';
+            lista.appendChild(div);
+          });
+        } else {
+          var sem=forecastSemanas[idx];
+          titulo.textContent="Semana "+labelSemana(sem);
+          var grupo=porSemana[idx];
+          if(grupo.length===0){lista.innerHTML='<div class="forecast-sem-prev">Nenhum card nesta semana</div>';panel.classList.add("open");return;}
+          grupo.sort(function(a,b){return formatBRLNum(getFieldVal(b,"Z - Valor total"))-formatBRLNum(getFieldVal(a,"Z - Valor total"));});
+          grupo.forEach(function(t){
+            var nome=getFieldVal(t,"N - 1 - Nome do cliente")||t.name||"--";
+            var val=formatBRL(getFieldVal(t,"Z - Valor total"));
+            var etapa=classificarEtapa(t.status&&t.status.status);
+            var consultor=(getField(t,"N - 2 - Nome do consultor")&&getField(t,"N - 2 - Nome do consultor").value&&getField(t,"N - 2 - Nome do consultor").value.name)||"--";
+            var div=document.createElement("div");div.className="forecast-item";
+            div.innerHTML='<div class="fi-name">'+nome+'</div><div class="fi-val">'+val+'</div><div class="fi-info">'+consultor+' &bull; <span class="'+badgeClass(etapa)+'">'+etapa+'</span></div>';
+            lista.appendChild(div);
+          });
+        }
+        panel.classList.add("open");
+      }
+    }
+  });
+}
+
+function renderizarGraficos(tasks){var f=filtrarPorPeriodo(tasks);renderChart1(f);renderChart2(tasks);renderChart3(tasks);renderChart4(tasks);}
+
+function preencherTabela(tasks){
+  var tbody=document.getElementById("tbody");tbody.innerHTML="";
+  var grupos={};ETAPAS.forEach(function(e){grupos[e]=[];});
+  tasks.forEach(function(t){var e=classificarEtapa(t.status&&t.status.status);grupos[e].push(t);});
+  ETAPAS.forEach(function(e){grupos[e].sort(function(a,b){return formatBRLNum(getFieldVal(b,"Z - Valor total"))-formatBRLNum(getFieldVal(a,"Z - Valor total"));});});
+  ETAPAS.forEach(function(etapa){
+    var grupo=grupos[etapa];if(grupo.length===0)return;
+    var trH=document.createElement("tr");trH.className="group-header";trH.onclick=function(){toggleGrupo(etapa);};
+    trH.innerHTML='<td colspan="6"><span class="'+badgeClass(etapa)+'">'+etapa+'</span> &nbsp;'+grupo.length+' negocio'+(grupo.length>1?"s":"")+'<span class="gh-icon" id="gh-icon-'+etapa+'">&#9660;</span></td>';
+    tbody.appendChild(trH);
+    grupo.forEach(function(t,idx){
+      var cliente=getFieldVal(t,"N - 1 - Nome do cliente")||t.name||"--";
+      var consultor=(getField(t,"N - 2 - Nome do consultor")&&getField(t,"N - 2 - Nome do consultor").value&&getField(t,"N - 2 - Nome do consultor").value.name)||"--";
+      var servico=(getField(t,"S - 1 - servico prestado")&&getField(t,"S - 1 - servico prestado").value&&getField(t,"S - 1 - servico prestado").value.name)||"--";
+      var valor=formatBRL(getFieldVal(t,"Z - Valor total"));
+      var estado=(getField(t,"N - 4 - Estado")&&getField(t,"N - 4 - Estado").value&&getField(t,"N - 4 - Estado").value.name)||"--";
+      var tr=document.createElement("tr");tr.setAttribute("data-grupo",etapa);
+      tr.innerHTML="<td style='color:#aaa;font-size:11px;text-align:right;padding-right:8px'>"+(idx+1)+"</td><td>"+cliente+"</td><td>"+consultor+"</td><td style='max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis'>"+servico+"</td><td>"+valor+"</td><td>"+estado+"</td>";
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+populaMeses();renderSemanaNav();
+
+(async function init(){
+  try{
+    todasTasks=await fetchTodasTasks();
+    document.getElementById("loading").style.display="none";
+    document.getElementById("filter-bar").style.display="flex";
+    document.getElementById("charts-section").style.display="block";
+    document.getElementById("table-section").style.display="block";
+    var ab=0,pip=0,fech=0,perd=0;
+    todasTasks.forEach(function(t){var e=classificarEtapa(t.status&&t.status.status);var v=parseFloat(getFieldVal(t,"Z - Valor total"))||0;if(e==="Fechado")fech++;else if(e==="Perdido")perd++;else ab++;pip+=v;});
+    document.getElementById("c-abertos").textContent=ab;
+    document.getElementById("c-pipeline").textContent=formatBRL(pip);
+    document.getElementById("c-fechados").textContent=fech;
+    document.getElementById("c-perdidos").textContent=perd;
+    preencherTabela(todasTasks);
+    renderizarGraficos(todasTasks);
+  }catch(err){
+    document.getElementById("loading").style.display="none";
+    document.getElementById("error").style.display="block";
+    document.getElementById("error").textContent="Erro ao carregar dados: "+err.message;
+  }
+})();
 </script>
 </body>
 </html>
