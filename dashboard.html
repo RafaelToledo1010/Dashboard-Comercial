@@ -86,8 +86,8 @@ tr:hover td { background: #f0f7f0; }
   <div class="cards">
     <div class="card"><div class="label">Em aberto</div><div class="value" id="c-abertos">-</div></div>
     <div class="card"><div class="label">Pipeline total</div><div class="value" id="c-pipeline">-</div></div>
-    <div class="card"><div class="label">Fechados no mes</div><div class="value" id="c-fechados">-</div></div>
-    <div class="card"><div class="label">Perdidos no mes</div><div class="value" id="c-perdidos">-</div></div>
+    <div class="card"><div class="label">Fechados no periodo</div><div class="value" id="c-fechados">-</div></div>
+    <div class="card"><div class="label">Perdidos no periodo</div><div class="value" id="c-perdidos">-</div></div>
   </div>
   <div id="loading">Carregando dados do ClickUp...<div id="loading-progress"></div></div>
   <div id="error"></div>
@@ -367,7 +367,30 @@ function renderChart4(tasks){
   });
 }
 
-function renderizarGraficos(tasks){var f=filtrarPorPeriodo(tasks);renderChart1(f);renderChart2(tasks);renderChart3(tasks);renderChart4(tasks);}
+function atualizarCards(){
+  var p=getPeriodoRange();
+  var ab=0,pip=0,fech=0,perd=0;
+  todasTasks.forEach(function(t){
+    var e=classificarEtapa(t.status&&t.status.status);
+    var v=parseFloat(getFieldVal(t,"Z - Valor total"))||0;
+    var dClose=t.date_closed?new Date(parseInt(t.date_closed)):null;
+    var dUpdate=new Date(parseInt(t.date_updated));
+    if(e==="Fechado"){
+      var dRef=dClose||dUpdate;
+      if(dRef>=p.inicio&&dRef<=p.fim)fech++;
+    } else if(e==="Perdido"){
+      if(dUpdate>=p.inicio&&dUpdate<=p.fim)perd++;
+    } else {
+      ab++;
+      pip+=v;
+    }
+  });
+  document.getElementById("c-abertos").textContent=ab;
+  document.getElementById("c-pipeline").textContent=formatBRL(pip);
+  document.getElementById("c-fechados").textContent=fech;
+  document.getElementById("c-perdidos").textContent=perd;
+}
+function renderizarGraficos(tasks){var f=filtrarPorPeriodo(tasks);atualizarCards();renderChart1(f);renderChart2(tasks);renderChart3(tasks);renderChart4(tasks);}
 
 function preencherTabela(tasks){
   var tbody=document.getElementById("tbody");tbody.innerHTML="";
@@ -401,12 +424,7 @@ populaMeses();renderSemanaNav();
     document.getElementById("filter-bar").style.display="flex";
     document.getElementById("charts-section").style.display="block";
     document.getElementById("table-section").style.display="block";
-    var ab=0,pip=0,fech=0,perd=0;
-    todasTasks.forEach(function(t){var e=classificarEtapa(t.status&&t.status.status);var v=parseFloat(getFieldVal(t,"Z - Valor total"))||0;if(e==="Fechado")fech++;else if(e==="Perdido")perd++;else ab++;pip+=v;});
-    document.getElementById("c-abertos").textContent=ab;
-    document.getElementById("c-pipeline").textContent=formatBRL(pip);
-    document.getElementById("c-fechados").textContent=fech;
-    document.getElementById("c-perdidos").textContent=perd;
+    atualizarCards();
     preencherTabela(todasTasks);
     renderizarGraficos(todasTasks);
   }catch(err){
