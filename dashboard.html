@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Comercial — ByMyCell</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #333; }
+header { background: #2ea52c; color: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+header h1 { font-size: 20px; font-weight: 600; }
+header span { font-size: 13px; opacity: 0.85; }
+main { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+.card .label { font-size: 12px; color: #888; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+.card .value { font-size: 28px; font-weight: 700; color: #2ea52c; }
+.filter-bar { display: none; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+.filter-btn { padding: 7px 18px; border: 1.5px solid #2ea52c; border-radius: 20px; background: white; color: #2ea52c; font-size: 13px; cursor: pointer; font-weight: 500; }
+.filter-btn.active { background: #2ea52c; color: white; }
+.week-nav { display: flex; align-items: center; gap: 6px; }
+.week-nav button { background: none; border: none; font-size: 18px; cursor: pointer; color: #2ea52c; padding: 0 4px; }
+.week-days { display: flex; gap: 6px; }
+.day-pill { padding: 5px 10px; border-radius: 16px; border: 1.5px solid #ddd; font-size: 12px; cursor: pointer; text-align: center; min-width: 52px; }
+.day-pill .day-name { font-weight: 600; display: block; }
+.day-pill .day-date { font-size: 10px; color: #888; display: block; }
+.day-pill.selected { background: #2ea52c; color: white; border-color: #2ea52c; }
+.day-pill.selected .day-date { color: rgba(255,255,255,0.8); }
+.day-pill.today { border-color: #2ea52c; }
+select { padding: 7px 12px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; color: #333; }
+.charts-section { display: none; }
+.charts-grid { display: grid; grid-template-columns: 1fr; gap: 24px; margin-bottom: 24px; }
+.chart-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+.chart-card h3 { font-size: 14px; color: #555; margin-bottom: 16px; font-weight: 600; }
+.chart-wrap { position: relative; height: 280px; }
+.table-section { display: none; margin-top: 8px; }
+.table-toggle { width: 100%; padding: 14px 20px; background: #e8f5e9; border: 1.5px solid #c8e6c9; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; color: #2ea52c; display: flex; justify-content: space-between; align-items: center; }
+.table-toggle:hover { background: #d4edda; }
+.table-collapsible { overflow: hidden; max-height: 0; transition: max-height 0.4s ease; }
+.table-collapsible.open { max-height: 2000px; }
+.table-inner { background: white; border-radius: 0 0 10px 10px; padding: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+input[type=text] { width: 100%; padding: 9px 14px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: #f9f9f9; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #eee; }
+td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; }
+tr:nth-child(even) td { background: #fafafa; }
+tr:hover td { background: #f0f7f0; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.badge-prosp { background: #e8e9eb; color: #555; }
+.badge-neg { background: #ede9fd; color: #5f55ee; }
+.badge-proj { background: #fff8e1; color: #b7860a; }
+.badge-perd { background: #fdecea; color: #d33d44; }
+.badge-fech { background: #e6f4ea; color: #008844; }
+#loading { text-align: center; padding: 40px; font-size: 15px; color: #888; }
+#error { display: none; text-align: center; padding: 40px; color: #d33d44; font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Dashboard Comercial — ByMyCell</h1>
+  <span id="data-hoje"></span>
+</header>
+<main>
+  <div class="cards">
+    <div class="card"><div class="label">Em aberto</div><div class="value" id="c-abertos">—</div></div>
+    <div class="card"><div class="label">Pipeline total</div><div class="value" id="c-pipeline">—</div></div>
+    <div class="card"><div class="label">Fechados no mês</div><div class="value" id="c-fechados">—</div></div>
+    <div class="card"><div class="label">Perdidos no mês</div><div class="value" id="c-perdidos">—</div></div>
+  </div>
+  <div id="loading">Carregando dados do ClickUp...</div>
+  <div id="error"></div>
+  <div class="filter-bar" id="filter-bar">
+    <button class="filter-btn active" onclick="setModo('semana')">Semana</button>
+    <button class="filter-btn" onclick="setModo('mes')">Mês</button>
+    <div id="semana-nav" class="week-nav">
+      <button onclick="navSemana(-1)">‹</button>
+      <div class="week-days" id="week-days"></div>
+      <button onclick="navSemana(1)">›</button>
+    </div>
+    <div id="mes-nav" style="display:none">
+      <select id="mes-select" onchange="setMes(this.value)"></select>
+    </div>
+  </div>
+  <div class="charts-section" id="charts-section">
+    <div class="charts-grid">
+      <div class="chart-card"><h3>Distribuição por etapa</h3><div class="chart-wrap"><canvas id="chart1"></canvas></div></div>
+      <div class="chart-card"><h3>Fluxo de entrada e saída por etapa</h3><div class="chart-wrap"><canvas id="chart2"></canvas></div></div>
+      <div class="chart-card"><h3>Idade dos cards por etapa</h3><div class="chart-wrap"><canvas id="chart3"></canvas></div></div>
+    </div>
+  </div>
+  <div class="table-section" id="table-section">
+    <button class="table-toggle" onclick="toggleTable()">
+      <span id="toggle-label">Todos os negócios (clique para expandir)</span>
+      <span id="toggle-icon">▼</span>
+    </button>
+    <div class="table-collapsible" id="table-collapsible">
+      <div class="table-inner">
+        <input type="text" id="busca" placeholder="Buscar por qualquer campo..." oninput="filtrarTabela()">
+        <table><thead><tr><th>Cliente</th><th>Consultor</th><th>Serviço</th><th>Valor</th><th>Status</th><th>Estado</th></tr></thead><tbody id="tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+Chart.register(ChartDataLabels);
+const ChartAnnotation = window['chartjs-plugin-annotation'];
+if (ChartAnnotation) Chart.register(ChartAnnotation);
+const API_URL = "https://api.clickup.com/api/v2/list/901321216249/task?include_closed=true&page=0";
+const AUTH = "pk_54928802_IHMAMJXTVMOS74OGBFI5YOMVGWT7JVHL";
+const ETAPAS = ["Prospecção","Em negociação","Projeto","Perdido","Fechado"];
+const CORES = { "Prospecção":"#87909e","Em negociação":"#5f55ee","Projeto":"#ffc53d","Perdido":"#d33d44","Fechado":"#008844" };
+const FAIXAS = ["1-5 dias","6-10 dias","11-15 dias","16-30 dias","+30 dias"];
+let todasTasks=[], instC1=null, instC2=null, instC3=null;
+let modoAtivo="semana", semanaOffset=0, mesSelecionado="";
+document.getElementById("data-hoje").textContent = new Date().toLocaleDateString("pt-BR",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+function getField(task,name){ return task.custom_fields?.find(f=>f.name===name); }
+function getFieldVal(task,name){ const f=getField(task,name); return f?.value??null; }
+function formatBRL(v){ const n=parseFloat(v); return isNaN(n)?"—":"R$ "+n.toLocaleString("pt-BR",{minimumFractionDigits:2}); }
+function classificarEtapa(s){ if(!s)return"Prospecção"; s=s.toLowerCase(); if(s.includes("prospec"))return"Prospecção"; if(s.includes("negocia"))return"Em negociação"; if(s.includes("projeto"))return"Projeto"; if(s.includes("perdido")||s.includes("perda"))return"Perdido"; if(s.includes("fechado")||s.includes("ganho")||s.includes("closed"))return"Fechado"; return"Prospecção"; }
+function idadeDias(task){ return Math.floor((Date.now()-parseInt(task.date_created))/86400000); }
+function faixaIdx(d){ if(d<=5)return 0; if(d<=10)return 1; if(d<=15)return 2; if(d<=30)return 3; return 4; }
+function badgeClass(etapa){ const m={"Prospecção":"prosp","Em negociação":"neg","Projeto":"proj","Perdido":"perd","Fechado":"fech"}; return"badge badge-"+(m[etapa]||"prosp"); }
+function toggleTable(){ const c=document.getElementById("table-collapsible"); const open=c.classList.toggle("open"); document.getElementById("toggle-label").textContent="Todos os negócios ("+(open?"clique para recolher":"clique para expandir")+")"; document.getElementById("toggle-icon").textContent=open?"▲":"▼"; }
+function filtrarTabela(){ const q=document.getElementById("busca").value.toLowerCase(); document.querySelectorAll("#tbody tr").forEach(tr=>{ tr.style.display=tr.textContent.toLowerCase().includes(q)?"":"none"; }); }
+function getSemanaRange(offset){ const hoje=new Date(); const dia=hoje.getDay(); const seg=new Date(hoje); seg.setDate(hoje.getDate()-((dia+6)%7)+offset*7); const dom=new Date(seg); dom.setDate(seg.getDate()+6); return{seg,dom}; }
+function renderSemanaNav(){ const {seg}=getSemanaRange(semanaOffset); const days=["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"]; const container=document.getElementById("week-days"); container.innerHTML=""; const hoje=new Date(); for(let i=0;i<7;i++){ const d=new Date(seg); d.setDate(seg.getDate()+i); const pill=document.createElement("div"); pill.className="day-pill"; if(d.toDateString()===hoje.toDateString())pill.classList.add("today"); if(semanaOffset===0)pill.classList.add("selected"); pill.innerHTML=`<span class="day-name">${days[i]}</span><span class="day-date">${d.getDate().toString().padStart(2,"0")}/${(d.getMonth()+1).toString().padStart(2,"0")}</span>`; pill.onclick=()=>{ semanaOffset=Math.round((d-hoje)/604800000); renderSemanaNav(); renderizarGraficos(todasTasks); }; container.appendChild(pill); } }
+function navSemana(dir){ semanaOffset+=dir; renderSemanaNav(); renderizarGraficos(todasTasks); }
+function setModo(modo){ modoAtivo=modo; document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active")); event.target.classList.add("active"); document.getElementById("semana-nav").style.display=modo==="semana"?"flex":"none"; document.getElementById("mes-nav").style.display=modo==="mes"?"block":"none"; renderizarGraficos(todasTasks); }
+function setMes(v){ mesSelecionado=v; renderizarGraficos(todasTasks); }
+function populaMeses(){ const sel=document.getElementById("mes-select"); const hoje=new Date(); for(let i=0;i<12;i++){ const d=new Date(hoje.getFullYear(),hoje.getMonth()-i,1); const val=`${d.getFullYear()}-${d.getMonth()}`; const label=d.toLocaleDateString("pt-BR",{month:"long",year:"numeric"}); const opt=document.createElement("option"); opt.value=val; opt.textContent=label.charAt(0).toUpperCase()+label.slice(1); sel.appendChild(opt); } mesSelecionado=sel.value; }
+function filtrarPorPeriodo(tasks){ if(modoAtivo==="semana"){ const {seg,dom}=getSemanaRange(semanaOffset); dom.setHours(23,59,59); return tasks.filter(t=>{ const d=new Date(parseInt(t.date_created)); return d>=seg&&d<=dom; }); } else { const [ano,mes]=mesSelecionado.split("-").map(Number); return tasks.filter(t=>{ const d=new Date(parseInt(t.date_created)); return d.getFullYear()===ano&&d.getMonth()===mes; }); } }
+const FLUXO={ semana:{ totais:[10,13,9,5,7], pos:{perm:[6,8,5,2,4],novos:[4,2,0,0,0],deProsp:[0,3,0,1,0],deEmNeg:[0,0,4,2,0],deProjeto:[0,0,0,0,3]}, neg:{paraEmNeg:[3,0,0,0,0],paraProjeto:[0,4,0,0,0],paraPerdido:[1,2,0,0,0],paraFechado:[0,0,3,0,0]} }, mes:{ totais:[32,39,28,20,23], pos:{perm:[18,24,16,8,14],novos:[14,6,0,0,0],deProsp:[0,9,0,5,0],deEmNeg:[0,0,12,7,0],deProjeto:[0,0,0,0,9]}, neg:{paraEmNeg:[9,0,0,0,0],paraProjeto:[0,12,0,0,0],paraPerdido:[5,7,0,0,0],paraFechado:[0,0,9,0,0]} } };
+const topLabelsPlugin={ id:"topLabels", afterDatasetsDraw(chart){ const {ctx,scales,data}=chart; const totais=chart.config.options.plugins.topLabels?.totais; if(!totais)return; ctx.save(); ctx.font="bold 11px 'Segoe UI',Arial,sans-serif"; ctx.fillStyle="#444"; ctx.textAlign="center"; ctx.textBaseline="bottom"; totais.forEach((total,i)=>{ let posSum=0; data.datasets.forEach(ds=>{ if(ds.stack==="pos")posSum+=(ds.data[i]||0); }); const x=scales.x.getPixelForValue(i); const y=scales.y.getPixelForValue(posSum); ctx.fillText(`${total} cards`,x,y-5); }); ctx.restore(); } };
+function renderChart1(tasks){ const cnt={}; ETAPAS.forEach(e=>cnt[e]=0); tasks.forEach(t=>cnt[classificarEtapa(t.status?.status)]++); if(instC1)instC1.destroy(); instC1=new Chart(document.getElementById("chart1"),{ type:"bar", data:{ labels:ETAPAS, datasets:[{ label:"Cards", data:ETAPAS.map(e=>cnt[e]), backgroundColor:ETAPAS.map(e=>CORES[e]), borderRadius:4, borderSkipped:false }] }, options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.x} cards`}}, datalabels:{anchor:"center",align:"center",color:"white",font:{weight:500},formatter:v=>v===0?null:v} }, scales:{ x:{beginAtZero:true,ticks:{stepSize:1,precision:0},grid:{color:"#f0f0f0"}}, y:{grid:{display:false}} } } }); }
+function renderChart2(periodo){ const d=FLUXO[periodo]||FLUXO.semana; const datasets=[ {label:"Permaneceram",data:[...d.pos.perm],backgroundColor:"#cccccc",stack:"pos"}, {label:"Novos",data:[...d.pos.novos],backgroundColor:"#4caf50",stack:"pos"}, {label:"De Prospecção",data:[...d.pos.deProsp],backgroundColor:CORES["Prospecção"],stack:"pos"}, {label:"De Em negociação",data:[...d.pos.deEmNeg],backgroundColor:CORES["Em negociação"],stack:"pos"}, {label:"De Projeto",data:[...d.pos.deProjeto],backgroundColor:CORES["Projeto"],stack:"pos"}, {label:"→ Em negociação",data:d.neg.paraEmNeg.map(v=>-v),backgroundColor:CORES["Em negociação"],stack:"neg"}, {label:"→ Projeto",data:d.neg.paraProjeto.map(v=>-v),backgroundColor:CORES["Projeto"],stack:"neg"}, {label:"→ Perdido",data:d.neg.paraPerdido.map(v=>-v),backgroundColor:CORES["Perdido"],stack:"neg"}, {label:"→ Fechado",data:d.neg.paraFechado.map(v=>-v),backgroundColor:CORES["Fechado"],stack:"neg"} ]; if(instC2)instC2.destroy(); instC2=new Chart(document.getElementById("chart2"),{ type:"bar", data:{labels:ETAPAS,datasets}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:"bottom",labels:{boxWidth:12,font:{size:11},padding:10}}, topLabels:{totais:d.totais}, tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${Math.abs(ctx.parsed.y)}`}}, datalabels:{color:"white",font:{size:11,weight:500},formatter:v=>v===0?null:Math.abs(v)}, annotation:{annotations:{zeroLine:{type:"line",scaleID:"y",value:0,borderColor:"#444",borderWidth:2}}} }, scales:{ x:{stacked:true,grid:{display:false}}, y:{stacked:true,ticks:{callback:v=>Math.abs(v)}} } }, plugins:[topLabelsPlugin] }); }
+function renderChart3(tasks){ const mat={}; ETAPAS.forEach(e=>mat[e]=[0,0,0,0,0]); tasks.forEach(t=>{ const e=classificarEtapa(t.status?.status); mat[e][faixaIdx(idadeDias(t))]++; }); const datasets=ETAPAS.map(e=>({ label:e, data:mat[e], backgroundColor:CORES[e], borderRadius:3 })); if(instC3)instC3.destroy(); instC3=new Chart(document.getElementById("chart3"),{ type:"bar", data:{labels:FAIXAS,datasets}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:"bottom",labels:{boxWidth:12,font:{size:11},padding:10}}, datalabels:{anchor:"end",align:"top",font:{size:11},color:ctx=>CORES[ETAPAS[ctx.datasetIndex]],formatter:v=>v===0?null:v} }, scales:{ x:{grid:{display:false}}, y:{beginAtZero:true,ticks:{stepSize:1,precision:0}} } } }); }
+function renderizarGraficos(tasks){ const f=filtrarPorPeriodo(tasks); renderChart1(f); renderChart2(modoAtivo); renderChart3(tasks); }
+function preencherTabela(tasks){ const tbody=document.getElementById("tbody"); tbody.innerHTML=""; tasks.forEach(t=>{ const etapa=classificarEtapa(t.status?.status); const cliente=getFieldVal(t,"N - 1 - Nome do cliente")||t.name||"—"; const consultor=getField(t,"N - 2 - Nome do consultor")?.value?.name||"—"; const servico=getField(t,"S - 1 - serviço prestado")?.value?.name||"—"; const valor=formatBRL(getFieldVal(t,"Z - Valor total")); const estado=getField(t,"N - 4 - Estado")?.value?.name||"—"; const tr=document.createElement("tr"); tr.innerHTML=`<td>${cliente}</td><td>${consultor}</td><td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${servico}</td><td>${valor}</td><td><span class="${badgeClass(etapa)}">${t.status?.status||"—"}</span></td><td>${estado}</td>`; tbody.appendChild(tr); }); }
+populaMeses();
+renderSemanaNav();
+fetch(API_URL,{headers:{Authorization:AUTH}})
+.then(r=>r.json())
+.then(data=>{ todasTasks=data.tasks||[]; document.getElementById("loading").style.display="none"; document.getElementById("filter-bar").style.display="flex"; document.getElementById("charts-section").style.display="block"; document.getElementById("table-section").style.display="block"; let ab=0,pip=0,fech=0,perd=0; todasTasks.forEach(t=>{ const e=classificarEtapa(t.status?.status); const v=parseFloat(getFieldVal(t,"Z - Valor total"))||0; if(e==="Fechado")fech++; else if(e==="Perdido")perd++; else ab++; pip+=v; }); document.getElementById("c-abertos").textContent=ab; document.getElementById("c-pipeline").textContent=formatBRL(pip); document.getElementById("c-fechados").textContent=fech; document.getElementById("c-perdidos").textContent=perd; preencherTabela(todasTasks); renderizarGraficos(todasTasks); })
+.catch(err=>{ document.getElementById("loading").style.display="none"; document.getElementById("error").style.display="block"; document.getElementById("error").textContent="Erro ao carregar dados: "+err.message; });
+</script>
+</body>
+</html>
